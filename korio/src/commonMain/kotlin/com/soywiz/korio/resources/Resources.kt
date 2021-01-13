@@ -60,21 +60,21 @@ interface ResourcesContainer {
 
 open class Resources(val coroutineContext: CoroutineContext, val root: VfsFile = resourcesVfs, val parent: Resources? = null) : ResourcesContainer {
     override val resources: Resources get() = this
-    internal val map = LinkedHashMap<String, Resource<*>>()
-    internal fun remove(name: String) {
+    val map = LinkedHashMap<String, Resource<*>>()
+    fun remove(name: String) {
         if (map.containsKey(name)) {
             map.remove(name)
         } else {
             parent?.remove(name)
         }
     }
-    internal fun add(resource: Resource<*>) {
+    fun add(resource: Resource<*>) {
         if (resource.cache == ResourceCache.NONE) return
         if (parent != null && resource.cache == ResourceCache.GLOBAL) return parent?.add(resource)
         map[resource.name] = resource
     }
     @Suppress("UNCHECKED_CAST")
-    internal fun <T : Any> get(name: String, cache: ResourceCache = ResourceCache.GLOBAL): Resource<T>? {
+    fun <T : Any> get(name: String, cache: ResourceCache = ResourceCache.GLOBAL): Resource<T>? {
         if (cache == ResourceCache.NONE) return null
         val res = (map as Map<String, Resource<T>>)[name]
         if (res != null) return res
