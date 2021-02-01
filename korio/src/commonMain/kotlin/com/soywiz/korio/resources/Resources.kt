@@ -14,14 +14,16 @@ interface Resourceable<T : Any> {
     suspend fun get(): T
 }
 
-class Resource<T : Any>(
+open class Resource<T : Any>(
     val resources: Resources,
     val name: String,
     val cache: ResourceCache,
-    private val gen: suspend Resources.() -> T
-) : Resourceable<T> {
+    private val gen: suspend Resources.() -> T,
+    var onGen: (() -> Unit)? = null
+
+    ) : Resourceable<T> {
     private var valueDeferred: Deferred<T>? = null
-    private var valueOrNull: T? = null
+    var valueOrNull: T? = null
 
     override fun getOrNull(): T? {
         getDeferred()
@@ -32,7 +34,10 @@ class Resource<T : Any>(
         if (valueDeferred == null) {
             valueDeferred = asyncImmediately(resources.coroutineContext) {
                 resources.add(this)
-                gen(resources).also { valueOrNull = it }
+                gen(resources).also {
+                    valueOrNull = it
+                    onGen?.invoke()
+                }
             }
         }
         return valueDeferred!!
@@ -60,21 +65,21 @@ interface ResourcesContainer {
 
 open class Resources(val coroutineContext: CoroutineContext, val root: VfsFile = resourcesVfs, val parent: Resources? = null) : ResourcesContainer {
     override val resources: Resources get() = this
-    val map = LinkedHashMap<String, Resource<*>>()
-    fun remove(name: String) {
+    open val map: MutableMap<String, Resource<*>> = LinkedHashMap()
+    open fun remove(name: String) {
         if (map.containsKey(name)) {
             map.remove(name)
         } else {
             parent?.remove(name)
         }
     }
-    fun add(resource: Resource<*>) {
+    open fun add(resource: Resource<*>) {
         if (resource.cache == ResourceCache.NONE) return
         if (parent != null && resource.cache == ResourceCache.GLOBAL) return parent?.add(resource)
         map[resource.name] = resource
     }
     @Suppress("UNCHECKED_CAST")
-    fun <T : Any> get(name: String, cache: ResourceCache = ResourceCache.GLOBAL): Resource<T>? {
+    open fun <T : Any> get(name: String, cache: ResourceCache = ResourceCache.GLOBAL): Resource<T>? {
         if (cache == ResourceCache.NONE) return null
         val res = (map as Map<String, Resource<T>>)[name]
         if (res != null) return res
@@ -90,7 +95,7 @@ class ResourceRef<T : Any>(val cache: ResourceCache = ResourceCache.GLOBAL, val 
         val resources = resourcesContainer.resources
         val res = resources.get<T>(property.name, cache)
         if (res != null) return res
-        val res2 = Resource(resources, property.name, cache, gen)
+        val res2 = Resource(resources, property.name, cache, gen , null)
         resources.add(res2)
         return res2
     }
