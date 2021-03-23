@@ -51,3 +51,5 @@ dependencies {
 	add("macosX64MainApi", "org.jetbrains.kotlinx:kotlinx-coroutines-core-macosx64:$coroutinesVersion")
      */
 }
+
+apply(from="publish.gradle.kts")
