@@ -12,6 +12,7 @@ import java.net.*
 import java.security.*
 import java.security.cert.*
 import javax.net.ssl.*
+import kotlin.math.*
 
 class HttpClientJvm : HttpClient() {
 	companion object {
@@ -84,7 +85,7 @@ class HttpClientJvm : HttpClient() {
 
 				val os = con.outputStream
 				while (left > 0) {
-					val read = ccontent.read(temp, 0, min2(temp.size, left.toUintClamp()))
+					val read = ccontent.read(temp, 0, min(temp.size, left.toUintClamp()))
 					if (read <= 0) invalidOp("Problem reading")
 					left -= read
 					os.write(temp, 0, read)
@@ -146,7 +147,7 @@ class HttpClientJvm : HttpClient() {
 				status = con.responseCode,
 				statusText = con.responseMessage,
 				headers = pheaders,
-				content = if (length != null) acontent.withLength(length) else acontent
+				rawContent = if (length != null) acontent.withLength(length) else acontent
 			)
 		}
 		return result

@@ -3,14 +3,12 @@ package com.soywiz.korio.compression.util
 import com.soywiz.kds.*
 import com.soywiz.kmem.*
 import com.soywiz.korio.experimental.*
-import com.soywiz.korio.internal.*
-import com.soywiz.korio.internal.min2
 import com.soywiz.korio.lang.*
 import com.soywiz.korio.stream.*
 import kotlin.math.*
 
 @KorioExperimentalApi
-open class BitReader(val s: AsyncInputStreamWithLength) : AsyncInputStreamWithLength {
+open class BitReader(val s: AsyncInputStream) : AsyncInputStreamWithLength {
 	@PublishedApi
 	internal var bitdata = 0
 	@PublishedApi
@@ -40,7 +38,7 @@ open class BitReader(val s: AsyncInputStreamWithLength) : AsyncInputStreamWithLe
 	private val tempBA = ByteArray(BIG_CHUNK_SIZE)
 	suspend fun prepareBytesUpTo(expectedBytes: Int): BitReader {
 		while (sbuffers.availableRead < expectedBytes) {
-			val read = s.read(tempBA, 0, min2(tempBA.size, expectedBytes))
+			val read = s.read(tempBA, 0, min(tempBA.size, expectedBytes))
 			if (read <= 0) break // No more data
 			sbuffers.write(tempBA, 0, read)
 		}
@@ -114,6 +112,6 @@ open class BitReader(val s: AsyncInputStreamWithLength) : AsyncInputStreamWithLe
 	//suspend fun readBytesExact(count: Int): ByteArray = abytes(count)
 
 	override suspend fun getPosition(): Long = sbuffers.read
-	override suspend fun getLength(): Long = s.getLength()
+	override suspend fun getLength(): Long = (s as? AsyncGetLengthStream)?.getLength() ?: error("Length not available on Stream")
 }
 
